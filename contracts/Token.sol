@@ -111,7 +111,7 @@ contract Token is ERC20, AccessControl {
 
     function isAdmin(address user) public view returns (bool) {
         return hasRole(ADMIN_ROLE, user);
-    }   
+    }
 
     function getCodinomeUser(address addrSender) private view returns ( string memory ) {
         string memory codinome;

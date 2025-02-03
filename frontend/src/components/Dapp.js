@@ -28,6 +28,7 @@ export class Dapp extends React.Component {
       networkError: undefined,
       isAdmin: false,
       usersWithBalances: [],
+      votingStatus: 0,
     };
 
     this.state = this.initialState;
@@ -115,6 +116,42 @@ export class Dapp extends React.Component {
             {this.state.usersWithBalances.length > 0 && (
               <Tabela usersWithBalances={this.state.usersWithBalances}/>
             )}
+
+            <br />
+            <p>
+              Estado atual da votação: 
+              <span className={this.state.votingStatus === 0 ? "text-success" : "text-danger"}>
+                {this.state.votingStatus === 0 ? " Ativada" : " Desativada"}
+              </span>
+            </p>
+            
+            {this.state.isAdmin && (
+              <div>
+                {this.state.votingStatus === 0 ? (
+                  <button
+                    className="btn btn-danger"
+                    onClick={async () => {
+                      const tx = await this._token.votingOff();
+                      await tx.wait();
+                      this._updateVotingStatus();
+                    }}
+                  >
+                    Desativar Votação
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-success"
+                    onClick={async () => {
+                      const tx = await this._token.votingOn();
+                      await tx.wait();
+                      this._updateVotingStatus();
+                    }}
+                  >
+                    Ativar Votação
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -150,6 +187,7 @@ export class Dapp extends React.Component {
     this._startPollingData();
     this._checkIfAdmin(userAddress);
     this._getUsersWithBalances();
+    this._updateVotingStatus();
   }
 
   async _initializeEthers() {
@@ -179,7 +217,7 @@ export class Dapp extends React.Component {
         codinome,
         balance: balances[index].toString(),
       }))
-      .filter(user => user.balance !== '0'); // Filtra usuários com saldo diferente de 0
+      .filter(user => user.balance !== '0');
   
     this.setState({ usersWithBalances });
   }
@@ -188,6 +226,11 @@ export class Dapp extends React.Component {
   async _checkIfAdmin(userAddress) {
     const isAdmin = await this._token.isAdmin(userAddress);
     this.setState({ isAdmin });
+  }
+
+  async _updateVotingStatus() {
+    const votingStatus = await this._token.votingStatus(); 
+    this.setState({ votingStatus });
   }
 
   async _getTokenData() {
