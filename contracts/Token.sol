@@ -34,6 +34,10 @@ contract Token is ERC20, AccessControl {
         require(votingStatus == Voting.ON, 'Votacao encerrada');
         _;
     }
+
+    event Voted(address indexed voter, address indexed votedAddr, uint256 amount);
+    event TokensIssued(address indexed admin, address indexed recipient, uint256 amount);
+
     constructor() ERC20("saTurings", "SAT") {
         address[19] memory addrs = [
             0x70997970C51812dc3A010C7d01b50e0d17dc79C8,
@@ -77,28 +81,30 @@ contract Token is ERC20, AccessControl {
 
     function issueToken(string memory codinome, uint256 amount) public onlyRole(ADMIN_ROLE) {
         _mint(users[codinome].addr, amount);
+        emit TokensIssued(msg.sender, users[codinome].addr, amount);
     }
 
     function vote(string memory codinome, uint256 amount) openVoting() public onlyRole(USER_ROLE) {
-        // + todos usuário autorizado.
-        // + Voto unico por codinome. 
-        // + Proibido autovoto.
-        // + Erro em caso de amount maior que 2*10^18 saTurings.
-        // + Minting de saTurings para o Addr associado ao codinome.
-        // + 0,2 Turing por votar
-        address addrVoto = users[codinome].addr;
-
+        // Verifica se a quantidade de tokens está dentro do limite
         require(amount <= 2 * (10 ** 18), 'Valor acima do montante de saTurings permitido');
+        
+        // Impede o autovoto
+        address addrVoto = users[codinome].addr;
         require(msg.sender != addrVoto, 'Nao e possivel votar em si mesmo');
-
+        
+        // Verifica se o usuário já votou no destinatário
         string memory codinomeUser = getCodinomeUser(msg.sender);
         for (uint i = 0; i < users[codinomeUser].votados.length; i++) {
             require(users[codinomeUser].votados[i] != addrVoto, 'Usuario ja votado');
         }
-        
+
+        // Registra o voto e recompensa
         users[codinomeUser].votados.push(addrVoto);
-        _mint(addrVoto, amount);            // voto
-        _mint(msg.sender, 2 * ( 10 ** 17)); // recompensa
+        _mint(addrVoto, amount);            // Mint de tokens para quem foi votado
+        _mint(msg.sender, 2 * (10 ** 17));  // Mint de tokens como recompensa
+
+        // Emite o evento de votação
+        emit Voted(msg.sender, addrVoto, amount);
     }
 
     function votingOn() public onlyRole(ADMIN_ROLE) {
@@ -128,7 +134,6 @@ contract Token is ERC20, AccessControl {
         string[] memory codinomes = new string[](19);
         uint256[] memory balances = new uint256[](19);
         string memory  codinome;
-        uint256 count = 0;
         uint256 balance;
 
         for (uint i = 0; i < 19; i++) {
@@ -137,7 +142,6 @@ contract Token is ERC20, AccessControl {
             if (balance > 0){
                 codinomes[i]    = codinome;
                 balances[i]     = balance;
-                count++;
             }
         }
 

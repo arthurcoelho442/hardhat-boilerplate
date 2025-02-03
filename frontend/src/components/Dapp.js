@@ -28,6 +28,7 @@ export class Dapp extends React.Component {
       isAdmin: false,
       usersWithBalances: [],
       votingStatus: 0,
+      voteError: undefined, // Adicionando erro de votação
     };
 
     this.state = this.initialState;
@@ -37,7 +38,7 @@ export class Dapp extends React.Component {
     if (window.ethereum === undefined) {
       return <NoWalletDetected />;
     }
-  
+
     if (!this.state.selectedAddress) {
       return (
         <ConnectWallet 
@@ -47,11 +48,11 @@ export class Dapp extends React.Component {
         />
       );
     }
-  
+
     if (!this.state.tokenData || !this.state.balance) {
       return <Loading />;
     }
-  
+
     return (
       <div className="container p-4">
         <div className="row">
@@ -60,23 +61,23 @@ export class Dapp extends React.Component {
               {this.state.tokenData.name} ({this.state.tokenData.symbol})
             </h1>
             <p>
-              Bem vindo <b>{this.state.selectedAddress}</b>, você tem {" "}
+              Bem-vindo <b>{this.state.selectedAddress}</b>, você tem {" "}
               <b>
                 {ethers.utils.formatEther(this.state.balance)}  Turings{/* {this.state.tokenData.symbol} */}
-              </b> 
+              </b>
               .
             </p>
           </div>
         </div>
-  
+
         <hr />
-  
+
         <div className="row">
           <div className="col-12">
             {this.state.txBeingSent && (
               <WaitingForTransactionMessage txHash={this.state.txBeingSent} />
             )}
-  
+
             {this.state.transactionError && (
               <TransactionErrorMessage
                 message={this._getRpcErrorMessage(this.state.transactionError)}
@@ -92,7 +93,7 @@ export class Dapp extends React.Component {
             )}
           </div>
         </div>
-  
+
         <div className="row">
           <div className="col-md-6">
             {this.state.balance.eq(0) && (
@@ -112,7 +113,7 @@ export class Dapp extends React.Component {
               />
             )}
           </div>
-  
+
           <div className="col-md-6">
             {this.state.usersWithBalances.length > 0 && (
               <Tabela usersWithBalances={this.state.usersWithBalances}/>
@@ -165,6 +166,11 @@ export class Dapp extends React.Component {
 
   async _connectWallet() {
     const [selectedAddress] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    if (!selectedAddress) {
+      console.error("Endereço da carteira não encontrado");
+      return;
+    }
+
     this._checkNetwork();
     this._initialize(selectedAddress);
 
@@ -211,7 +217,6 @@ export class Dapp extends React.Component {
 
   async _getUsersWithBalances() {
     const [codinomes, balances] = await this._token.getUsersWithBalances();
-    
     const usersWithBalances = codinomes
       .map((codinome, index) => ({
         codinome,
@@ -221,8 +226,21 @@ export class Dapp extends React.Component {
   
     this.setState({ usersWithBalances });
   }
-  
-  
+
+  async componentDidMount() {
+    this._initializeEthers();
+
+    // Escuta o evento de voto
+    this._token.on('Voted', (voter, amount) => {
+      this._updateBalance();
+    });
+
+    // Escuta o evento de emissão de tokens
+    this._token.on('TokensIssued', (admin, recipient, amount) => {
+      this._updateBalance(); // Atualiza saldos
+    });
+  }
+
   async _checkIfAdmin(userAddress) {
     const isAdmin = await this._token.isAdmin(userAddress);
     this.setState({ isAdmin });
@@ -241,6 +259,7 @@ export class Dapp extends React.Component {
 
   async _updateBalance() {
     const balance = await this._token.balanceOf(this.state.selectedAddress);
+    console.log('Novo saldo:', balance.toString());
     this.setState({ balance });
     this._getUsersWithBalances();
   }
@@ -270,6 +289,11 @@ export class Dapp extends React.Component {
     try {
       this._dismissTransactionError();
       this._dismissVoteError(); // Limpar erros de votação anteriores
+
+      if (!codinome) {
+        console.error("Codinome inválido");
+        return;
+      }
 
       const tx = await this._token.vote(codinome, amount);
       this.setState({ txBeingSent: tx.hash });
@@ -335,7 +359,9 @@ export class Dapp extends React.Component {
 
   _checkNetwork() {
     if (window.ethereum.networkVersion !== HARDHAT_NETWORK_ID) {
-      this._switchChain();
+      this.setState({
+        networkError: `Por favor, conecte-se à rede correta (ID da rede: ${HARDHAT_NETWORK_ID})`,
+      });
     }
   }
 }
