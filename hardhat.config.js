@@ -7,5 +7,16 @@ require("./tasks/faucet");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.17",
+  solidity: "0.8.20",
+  networks: {
+    hardhat: {
+      chainId: 31337,
+      allowUnlimitedContractSize: true,
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545",
+      chainId: 31337,
+      allowUnlimitedContractSize: true,
+    },
+  },
 };

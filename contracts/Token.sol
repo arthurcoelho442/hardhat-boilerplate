@@ -2,77 +2,125 @@
 
 // Solidity files have to start with this pragma.
 // It will be used by the Solidity compiler to validate its version.
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.20;
 
 // We import this library to be able to use console.log
 import "hardhat/console.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
+contract Token is ERC20, AccessControl {
+    using Strings for uint256;
+    struct User {
+        address addr;
+        address[] votados;
+    }
 
-// This is the main building block for smart contracts.
-contract Token {
-    // Some string type variables to identify the token.
-    string public name = "My Hardhat Token";
-    string public symbol = "MHT";
+    enum Voting {
+        ON,
+        OFF
+    }
+    Voting public votingStatus;
 
-    // The fixed amount of tokens stored in an unsigned integer type variable.
-    uint256 public totalSupply = 1000000;
-
-    // An address type variable is used to store ethereum accounts.
     address public owner;
+    address professora = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+    
+    bytes32 public constant ADMIN_ROLE  = keccak256("ADMIN_ROLE");
+    bytes32 public constant USER_ROLE   = keccak256("USER_ROLE");
 
-    // A mapping is a key/value map. Here we store each account balance.
-    mapping(address => uint256) balances;
+    mapping(string => User) public users;
+    modifier openVoting() {
+        require(votingStatus == Voting.ON, 'Votacao encerrada');
+        _;
+    }
+    constructor() ERC20("saTurings", "SAT") {
+        address[19] memory addrs = [
+            0x70997970C51812dc3A010C7d01b50e0d17dc79C8,
+            0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC,
+            0x90F79bf6EB2c4f870365E785982E1f101E93b906,
+            0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65,
+            0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc,
+            0x976EA74026E726554dB657fA54763abd0C3a0aa9,
+            0x14dC79964da2C08b23698B3D3cc7Ca32193d9955,
+            0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f,
+            0xa0Ee7A142d267C1f36714E4a8F75612F20a79720,
+            0xBcd4042DE499D14e55001CcbB24a551F3b954096,
+            0x71bE63f3384f5fb98995898A86B02Fb2426c5788,
+            0xFABB0ac9d68B0B445fB7357272Ff202C5651694a,
+            0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec,
+            0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097,
+            0xcd3B766CCDd6AE721141F452C550Ca635964ce71,
+            0x2546BcD3c84621e976D8185a91A922aE77ECEc30,
+            0xbDA5747bFD65F08deb54cb465eB87D40e51B197E,
+            0xdD2FD4581271e230360230F9337D5c0430Bf44C0,
+            0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199
+        ];
 
-    // The Transfer event helps off-chain aplications understand
-    // what happens within your contract.
-    event Transfer(address indexed _from, address indexed _to, uint256 _value);
-
-    /**
-     * Contract initialization.
-     */
-    constructor() {
-        // The totalSupply is assigned to the transaction sender, which is the
-        // account that is deploying the contract.
-        balances[msg.sender] = totalSupply;
+        string memory codinome;
         owner = msg.sender;
+        votingStatus = Voting.ON;
+
+        // ADMIN
+        _grantRole(DEFAULT_ADMIN_ROLE, owner);
+        _grantRole(ADMIN_ROLE, owner);
+        _grantRole(ADMIN_ROLE, professora);
+
+        // USERS
+        for(uint i = 0; i < addrs.length; i++){
+            codinome = string(abi.encodePacked("nome", (i + 1).toString()));
+            users[codinome].addr = addrs[i];
+            _grantRole(USER_ROLE, addrs[i]);
+        }
+        _grantRole(USER_ROLE, owner);
     }
 
-    /**
-     * A function to transfer tokens.
-     *
-     * The `external` modifier makes a function *only* callable from outside
-     * the contract.
-     */
-    function transfer(address to, uint256 amount) external {
-        // Check if the transaction sender has enough tokens.
-        // If `require`'s first argument evaluates to `false` then the
-        // transaction will revert.
-        require(balances[msg.sender] >= amount, "Not enough tokens");
-
-        // We can print messages and values using console.log, a feature of
-        // Hardhat Network:
-        console.log(
-            "Transferring from %s to %s %s tokens",
-            msg.sender,
-            to,
-            amount
-        );
-
-        // Transfer the amount.
-        balances[msg.sender] -= amount;
-        balances[to] += amount;
-
-        // Notify off-chain applications of the transfer.
-        emit Transfer(msg.sender, to, amount);
+    function issueToken(string memory codinome, uint256 amount) public onlyRole(ADMIN_ROLE) {
+        _mint(users[codinome].addr, amount);
     }
 
-    /**
-     * Read only function to retrieve the token balance of a given account.
-     *
-     * The `view` modifier indicates that it doesn't modify the contract's
-     * state, which allows us to call it without executing a transaction.
-     */
-    function balanceOf(address account) external view returns (uint256) {
-        return balances[account];
+    function vote(string memory codinome, uint256 amount) openVoting() public onlyRole(USER_ROLE) {
+        // + todos usuário autorizado.
+        // + Voto unico por codinome. 
+        // + Proibido autovoto.
+        // + Erro em caso de amount maior que 2*10^18 saTurings.
+        // + Minting de saTurings para o Addr associado ao codinome.
+        // + 0,2 Turing por votar
+        address addrVoto = users[codinome].addr;
+
+        require(amount <= 2 * (10 ** 18), 'Valor acima do montante de saTurings');
+        require(msg.sender != addrVoto, 'Nao e possivel votar em si mesmo');
+
+        string memory codinomeUser = getCodinomeUser(msg.sender);
+        for (uint i = 0; i < users[codinomeUser].votados.length; i++) {
+            require(users[codinomeUser].votados[i] != addrVoto, 'Usuario ja votado');
+        }
+        
+        users[codinomeUser].votados.push(addrVoto);
+        _mint(addrVoto, amount);            // voto
+        _mint(msg.sender, 2 * ( 10 ** 17)); // recompensa
+    }
+
+    function votingOn() public onlyRole(ADMIN_ROLE) {
+        votingStatus = Voting.ON;
+    }
+
+    function votingOff() public onlyRole(ADMIN_ROLE) {
+        votingStatus = Voting.OFF;
+    }
+
+    function isAdmin(address user) public view returns (bool) {
+        return hasRole(ADMIN_ROLE, user);
+    }   
+
+    function getCodinomeUser(address addrSender) private view returns ( string memory ) {
+        string memory codinome;
+        for (uint i = 0; i < 19; i++) {
+            codinome = string(abi.encodePacked("nome", (i + 1).toString()));
+            if (users[codinome].addr == addrSender) {
+                return codinome;
+            }
+        }
+        revert("Usuario nao encontrado");
     }
 }

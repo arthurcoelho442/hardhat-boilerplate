@@ -3,9 +3,9 @@ import React from "react";
 export function NoTokensMessage({ selectedAddress }) {
   return (
     <>
-      <p>You don't have tokens to transfer</p>
+      <p>Você não tem saTurings para votação</p>
       <p>
-        To get some tokens, open a terminal in the root of the repository and run: 
+        Para conseguir mais peça para os administradores ou execute o comando abaixo:
         <br />
         <br />
         <code>npx hardhat --network localhost faucet {selectedAddress}</code>
