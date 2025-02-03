@@ -120,7 +120,7 @@ contract Token is ERC20, AccessControl {
         return hasRole(ADMIN_ROLE, user);
     }
 
-    function getCodinomeUser(address addrSender) private view returns ( string memory ) {
+    function getCodinomeUser(address addrSender) public view returns ( string memory ) {
         string memory codinome;
         for (uint i = 0; i < 19; i++) {
             codinome = string(abi.encodePacked("nome", (i + 1).toString()));

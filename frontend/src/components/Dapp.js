@@ -28,8 +28,8 @@ export class Dapp extends React.Component {
       isAdmin: false,
       usersWithBalances: [],
       votingStatus: 0,
-      eError: undefined, // Adicionando erro de votação
-      codinome: '',
+      eError: undefined,
+      codinome: undefined,
     };
 
     this.state = this.initialState;
@@ -62,9 +62,15 @@ export class Dapp extends React.Component {
               {this.state.tokenData.name} ({this.state.tokenData.symbol})
             </h1>
             <p>
-              Bem-vindo! <b>{this.state.codinome}</b>, você tem {" "}
+              Bem-vindo!{" "}
+              {this.state.codinome ? (
+                <b>{this.state.codinome}</b>
+              ) : (
+                <span>Carregando codinome...</span>
+              )}
+              , você tem{" "}
               <b>
-                {ethers.utils.formatEther(this.state.balance)}  Turings{/* {this.state.tokenData.symbol} */}
+                {ethers.utils.formatEther(this.state.balance)} Turings
               </b>
               .
             </p>
@@ -86,7 +92,6 @@ export class Dapp extends React.Component {
               />
             )}
 
-            {/* Exibir erros de votação */}
             {this.state.eError && (
               <div className="alert alert-danger" role="alert">
                 {this.state.eError}
@@ -165,7 +170,6 @@ export class Dapp extends React.Component {
     this._stopPollingData();
   }
 
-  
   async componentDidMount() {
     this._initializeEthers();
 
@@ -230,12 +234,14 @@ export class Dapp extends React.Component {
     this._pollDataInterval = undefined;
   }
 
-  
   async _getCodinomeUser(userAddress) {
-    console.log(userAddress)
-    const codinome = await this._token.getCodinomeUser(userAddress);
-    console.log(codinome)
-    this.setState({ codinome });
+    try {
+      const codinome = await this._token.getCodinomeUser(userAddress);
+      this.setState({ codinome });
+    } catch (error) {
+      console.error("Erro ao buscar codinome:", error);
+      this.setState({ codinome: userAddress });
+    }
   }
 
   async _getUsersWithBalances() {
@@ -293,10 +299,9 @@ export class Dapp extends React.Component {
         return;
       }
       
-      // Capturar o evento VoteFailed
       if (error.reason) {
         const match = error.reason.match(/'([^']+)'/);
-        this.setState({ eError: match[1] }); // Exibir a mensagem de erro
+        this.setState({ eError: match[1] });
       } else {
         console.error(error);
         this.setState({ transactionError: error });
@@ -309,7 +314,7 @@ export class Dapp extends React.Component {
   async _vote(codinome, amount) {
     try {
       this._dismissTransactionError();
-      this._dismissEError(); // Limpar erros de votação anteriores
+      this._dismissEError();
 
       if (!codinome) {
         console.error("Codinome inválido");
@@ -319,25 +324,21 @@ export class Dapp extends React.Component {
       const tx = await this._token.vote(codinome, amount);
       this.setState({ txBeingSent: tx.hash });
 
-      // Aguardar a confirmação da transação
       const receipt = await tx.wait();
 
-      // Verificar se a transação foi bem-sucedida
       if (receipt.status === 0) {
         throw new Error("Transaction failed");
       }
 
-      // Atualizar o saldo após a votação
       await this._updateBalance();
     } catch (error) {
       if (error.code === ERROR_CODE_TX_REJECTED_BY_USER) {
-        return; // Usuário rejeitou a transação
+        return;
       }
 
-      // Capturar o evento VoteFailed
       if (error.reason) {
         const match = error.reason.match(/'([^']+)'/);
-        this.setState({ eError: match[1] }); // Exibir a mensagem de erro
+        this.setState({ eError: match[1] });
       } else {
         console.error(error);
         this.setState({ transactionError: error });
