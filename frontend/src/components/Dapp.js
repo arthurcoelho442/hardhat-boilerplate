@@ -29,6 +29,7 @@ export class Dapp extends React.Component {
       usersWithBalances: [],
       votingStatus: 0,
       eError: undefined, // Adicionando erro de votação
+      codinome: '',
     };
 
     this.state = this.initialState;
@@ -61,7 +62,7 @@ export class Dapp extends React.Component {
               {this.state.tokenData.name} ({this.state.tokenData.symbol})
             </h1>
             <p>
-              Bem-vindo <b>{this.state.selectedAddress}</b>, você tem {" "}
+              Bem-vindo! <b>{this.state.codinome}</b>, você tem {" "}
               <b>
                 {ethers.utils.formatEther(this.state.balance)}  Turings{/* {this.state.tokenData.symbol} */}
               </b>
@@ -164,6 +165,19 @@ export class Dapp extends React.Component {
     this._stopPollingData();
   }
 
+  
+  async componentDidMount() {
+    this._initializeEthers();
+
+    this._token.on('Voted', (voter, amount) => {
+      this._updateBalance();
+    });
+
+    this._token.on('TokensIssued', (admin, recipient, amount) => {
+      this._updateBalance(); 
+    });
+  }
+
   async _connectWallet() {
     const [selectedAddress] = await window.ethereum.request({ method: 'eth_requestAccounts' });
     if (!selectedAddress) {
@@ -193,6 +207,7 @@ export class Dapp extends React.Component {
     this._startPollingData();
     this._checkIfAdmin(userAddress);
     this._getUsersWithBalances();
+    this._getCodinomeUser(userAddress);
     this._updateVotingStatus();
   }
 
@@ -215,6 +230,14 @@ export class Dapp extends React.Component {
     this._pollDataInterval = undefined;
   }
 
+  
+  async _getCodinomeUser(userAddress) {
+    console.log(userAddress)
+    const codinome = await this._token.getCodinomeUser(userAddress);
+    console.log(codinome)
+    this.setState({ codinome });
+  }
+
   async _getUsersWithBalances() {
     const [codinomes, balances] = await this._token.getUsersWithBalances();
     const usersWithBalances = codinomes
@@ -229,18 +252,6 @@ export class Dapp extends React.Component {
     });
   
     this.setState({ usersWithBalances });
-  }
-
-  async componentDidMount() {
-    this._initializeEthers();
-
-    this._token.on('Voted', (voter, amount) => {
-      this._updateBalance();
-    });
-
-    this._token.on('TokensIssued', (admin, recipient, amount) => {
-      this._updateBalance(); 
-    });
   }
 
   async _checkIfAdmin(userAddress) {
