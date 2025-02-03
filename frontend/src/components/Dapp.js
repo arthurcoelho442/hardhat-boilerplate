@@ -26,6 +26,7 @@ export class Dapp extends React.Component {
       transactionError: undefined,
       networkError: undefined,
       isAdmin: false,
+      usersWithBalances: [],
     };
 
     this.state = this.initialState;
@@ -111,6 +112,27 @@ export class Dapp extends React.Component {
             )}
           </div>
         </div>
+        <div className="row">
+          <div className="col-12">
+            <h4>Classificação</h4>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Codinome</th>
+                  <th>Qtd. Token</th>
+                </tr>
+              </thead>
+              <tbody>
+                {this.state.usersWithBalances.map((user, index) => (
+                  <tr key={index}>
+                    <td>{user.codinome}</td>
+                    <td>{user.balance}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   }
@@ -142,6 +164,7 @@ export class Dapp extends React.Component {
     this._getTokenData();
     this._startPollingData();
     this._checkIfAdmin(userAddress);
+    this._getUsersWithBalances();
   }
 
   async _initializeEthers() {
@@ -163,6 +186,15 @@ export class Dapp extends React.Component {
     this._pollDataInterval = undefined;
   }
 
+  async _getUsersWithBalances() {
+    const [codinomes, balances] = await this._token.getUsersWithBalances();
+    const usersWithBalances = codinomes.map((codinome, index) => ({
+      codinome,
+      balance: balances[index].toString(),
+    }));
+    this.setState({ usersWithBalances });
+  }
+  
   async _checkIfAdmin(userAddress) {
     const isAdmin = await this._token.isAdmin(userAddress);
     this.setState({ isAdmin });
@@ -177,6 +209,7 @@ export class Dapp extends React.Component {
   async _updateBalance() {
     const balance = await this._token.balanceOf(this.state.selectedAddress);
     this.setState({ balance });
+    this._getUsersWithBalances();
   }
 
   async _issueTokens(codinome, amount) {
