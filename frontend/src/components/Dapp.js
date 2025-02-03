@@ -28,7 +28,7 @@ export class Dapp extends React.Component {
       isAdmin: false,
       usersWithBalances: [],
       votingStatus: 0,
-      voteError: undefined, // Adicionando erro de votação
+      eError: undefined, // Adicionando erro de votação
     };
 
     this.state = this.initialState;
@@ -86,9 +86,9 @@ export class Dapp extends React.Component {
             )}
 
             {/* Exibir erros de votação */}
-            {this.state.voteError && (
+            {this.state.eError && (
               <div className="alert alert-danger" role="alert">
-                {this.state.voteError}
+                {this.state.eError}
               </div>
             )}
           </div>
@@ -259,7 +259,6 @@ export class Dapp extends React.Component {
 
   async _updateBalance() {
     const balance = await this._token.balanceOf(this.state.selectedAddress);
-    console.log('Novo saldo:', balance.toString());
     this.setState({ balance });
     this._getUsersWithBalances();
   }
@@ -267,6 +266,8 @@ export class Dapp extends React.Component {
   async _issueTokens(codinome, amount) {
     try {
       this._dismissTransactionError();
+      this._dismissEError();
+
       const tx = await this._token.issueToken(codinome, amount);
       this.setState({ txBeingSent: tx.hash });
       const receipt = await tx.wait();
@@ -278,8 +279,15 @@ export class Dapp extends React.Component {
       if (error.code === ERROR_CODE_TX_REJECTED_BY_USER) {
         return;
       }
-      console.error(error);
-      this.setState({ transactionError: error });
+      
+      // Capturar o evento VoteFailed
+      if (error.reason) {
+        const match = error.reason.match(/'([^']+)'/);
+        this.setState({ eError: match[1] }); // Exibir a mensagem de erro
+      } else {
+        console.error(error);
+        this.setState({ transactionError: error });
+      }
     } finally {
       this.setState({ txBeingSent: undefined });
     }
@@ -288,7 +296,7 @@ export class Dapp extends React.Component {
   async _vote(codinome, amount) {
     try {
       this._dismissTransactionError();
-      this._dismissVoteError(); // Limpar erros de votação anteriores
+      this._dismissEError(); // Limpar erros de votação anteriores
 
       if (!codinome) {
         console.error("Codinome inválido");
@@ -315,7 +323,8 @@ export class Dapp extends React.Component {
 
       // Capturar o evento VoteFailed
       if (error.reason) {
-        this.setState({ voteError: error.reason }); // Exibir a mensagem de erro
+        const match = error.reason.match(/'([^']+)'/);
+        this.setState({ eError: match[1] }); // Exibir a mensagem de erro
       } else {
         console.error(error);
         this.setState({ transactionError: error });
@@ -325,8 +334,8 @@ export class Dapp extends React.Component {
     }
   }
 
-  _dismissVoteError() {
-    this.setState({ voteError: undefined });
+  _dismissEError() {
+    this.setState({ eError: undefined });
   }
   
   _dismissTransactionError() {

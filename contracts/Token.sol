@@ -80,6 +80,7 @@ contract Token is ERC20, AccessControl {
     }
 
     function issueToken(string memory codinome, uint256 amount) public onlyRole(ADMIN_ROLE) {
+        require(users[codinome].addr != address(0), "Usuario nao encontrado");
         _mint(users[codinome].addr, amount);
         emit TokensIssued(msg.sender, users[codinome].addr, amount);
     }
