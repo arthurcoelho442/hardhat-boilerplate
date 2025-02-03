@@ -10,6 +10,7 @@ import { Vote } from "./Vote";
 import { TransactionErrorMessage } from "./TransactionErrorMessage";
 import { WaitingForTransactionMessage } from "./WaitingForTransactionMessage";
 import { NoTokensMessage } from "./NoTokensMessage";
+import { Tabela } from "./Tabela";
 
 const HARDHAT_NETWORK_ID = '31337';
 const ERROR_CODE_TX_REJECTED_BY_USER = 4001;
@@ -36,7 +37,7 @@ export class Dapp extends React.Component {
     if (window.ethereum === undefined) {
       return <NoWalletDetected />;
     }
-
+  
     if (!this.state.selectedAddress) {
       return (
         <ConnectWallet 
@@ -46,11 +47,11 @@ export class Dapp extends React.Component {
         />
       );
     }
-
+  
     if (!this.state.tokenData || !this.state.balance) {
       return <Loading />;
     }
-
+  
     return (
       <div className="container p-4">
         <div className="row">
@@ -61,28 +62,28 @@ export class Dapp extends React.Component {
             <p>
               Bem vindo <b>{this.state.selectedAddress}</b>, você tem {" "}
               <b>
-               {ethers.utils.formatEther(this.state.balance)}  Turings{/* {this.state.tokenData.symbol} */}
+                {ethers.utils.formatEther(this.state.balance)}  Turings{/* {this.state.tokenData.symbol} */}
               </b> 
               .
             </p>
           </div>
         </div>
-
+  
         <hr />
-
+  
         <div className="row">
           <div className="col-12">
             {this.state.txBeingSent && (
               <WaitingForTransactionMessage txHash={this.state.txBeingSent} />
             )}
-
+  
             {this.state.transactionError && (
               <TransactionErrorMessage
                 message={this._getRpcErrorMessage(this.state.transactionError)}
                 dismiss={() => this._dismissTransactionError()}
               />
             )}
-
+            
             {/* Exibir erros de votação */}
             {this.state.voteError && (
               <div className="alert alert-danger" role="alert">
@@ -91,51 +92,34 @@ export class Dapp extends React.Component {
             )}
           </div>
         </div>
-
+  
         <div className="row">
-          <div className="col-12">
+          {/* Coluna para Vote e IssueTokens */}
+          <div className="col-md-6">
             {this.state.balance.eq(0) && (
               <NoTokensMessage selectedAddress={this.state.selectedAddress} />
             )}
-
+  
             {this.state.balance.gt(0) && (
-              <Vote
-                vote={(codinome, amount) => this._vote(codinome, amount)}
-              />
+              <Vote vote={(codinome, amount) => this._vote(codinome, amount)} />
             )}
-            
+  
             {this.state.isAdmin && (
               <IssueTokens
-                issueTokens={(codinome, amount) =>
-                  this._issueTokens(codinome, amount)}
+                issueTokens={(codinome, amount) => this._issueTokens(codinome, amount)}
               />
             )}
           </div>
-        </div>
-        <div className="row">
-          <div className="col-12">
-            <h4>Classificação</h4>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Codinome</th>
-                  <th>Qtd. Token</th>
-                </tr>
-              </thead>
-              <tbody>
-                {this.state.usersWithBalances.map((user, index) => (
-                  <tr key={index}>
-                    <td>{user.codinome}</td>
-                    <td>{user.balance}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+  
+          {/* Coluna para a tabela */}
+          <div className="col-md-6">
+            <Tabela usersWithBalances={this.state.usersWithBalances}/>
           </div>
         </div>
       </div>
     );
   }
+  
 
   componentWillUnmount() {
     this._stopPollingData();
@@ -188,12 +172,17 @@ export class Dapp extends React.Component {
 
   async _getUsersWithBalances() {
     const [codinomes, balances] = await this._token.getUsersWithBalances();
-    const usersWithBalances = codinomes.map((codinome, index) => ({
-      codinome,
-      balance: balances[index].toString(),
-    }));
+    
+    const usersWithBalances = codinomes
+      .map((codinome, index) => ({
+        codinome,
+        balance: balances[index].toString(),
+      }))
+      .filter(user => user.balance !== '0'); // Filtra usuários com saldo diferente de 0
+  
     this.setState({ usersWithBalances });
   }
+  
   
   async _checkIfAdmin(userAddress) {
     const isAdmin = await this._token.isAdmin(userAddress);

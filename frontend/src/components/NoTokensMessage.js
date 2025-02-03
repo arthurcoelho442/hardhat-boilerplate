@@ -5,7 +5,7 @@ export function NoTokensMessage({ selectedAddress }) {
     <>
       <p>Você não tem saTurings para votação</p>
       <p>
-        Para conseguir mais peça para os administradores ou execute o comando abaixo:
+        Para obter mais, solicite aos administradores ou execute o comando abaixo:
         <br />
         <br />
         <code>npx hardhat --network localhost faucet {selectedAddress}</code>

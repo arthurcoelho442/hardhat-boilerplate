@@ -125,8 +125,8 @@ contract Token is ERC20, AccessControl {
     }
 
     function getUsersWithBalances() public view returns (string[] memory, uint256[] memory) {
-        string[] memory tempCodinomes = new string[](19);
-        uint256[] memory tempBalances = new uint256[](19);
+        string[] memory codinomes = new string[](19);
+        uint256[] memory balances = new uint256[](19);
         string memory  codinome;
         uint256 count = 0;
         uint256 balance;
@@ -135,19 +135,10 @@ contract Token is ERC20, AccessControl {
             codinome    = string(abi.encodePacked("nome", (i + 1).toString()));
             balance     = balanceOf(users[codinome].addr);
             if (balance > 0){
-                tempCodinomes[i]    = codinome;
-                tempBalances[i]     = balance;
+                codinomes[i]    = codinome;
+                balances[i]     = balance;
                 count++;
             }
-        }
-
-        string[] memory codinomes = new string[](count);
-        uint256[] memory balances = new uint256[](count);
-
-        // Copiar os dados para os arrays finais
-        for (uint i = 0; i < count; i++) {
-            codinomes[i] = tempCodinomes[i];
-            balances[i] = tempBalances[i];
         }
 
         return (codinomes, balances);
