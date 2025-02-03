@@ -83,7 +83,7 @@ export class Dapp extends React.Component {
                 dismiss={() => this._dismissTransactionError()}
               />
             )}
-            
+
             {/* Exibir erros de votação */}
             {this.state.voteError && (
               <div className="alert alert-danger" role="alert">
@@ -111,9 +111,10 @@ export class Dapp extends React.Component {
             )}
           </div>
   
-          {/* Coluna para a tabela */}
           <div className="col-md-6">
-            <Tabela usersWithBalances={this.state.usersWithBalances}/>
+            {this.state.usersWithBalances.length > 0 && (
+              <Tabela usersWithBalances={this.state.usersWithBalances}/>
+            )}
           </div>
         </div>
       </div>
