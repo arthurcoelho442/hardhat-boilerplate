@@ -13,3 +13,11 @@ export function NoTokensMessage({ selectedAddress }) {
     </>
   );
 }
+
+export function NoTokensMessageAdmin({ selectedAddress }) {
+  return (
+    <>
+      <p>Você não tem saTurings para votação, emita Tokens abaixo: </p>
+    </>
+  );
+}

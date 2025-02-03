@@ -5,11 +5,10 @@ import contractAddress from "../contracts/contract-address.json";
 import { NoWalletDetected } from "./NoWalletDetected";
 import { ConnectWallet } from "./ConnectWallet";
 import { Loading } from "./Loading";
-import { IssueTokens } from "./IssueTokens"; 
-import { Vote } from "./Vote";
+import { VoteAndIssue } from "./VoteAndIssue";
 import { TransactionErrorMessage } from "./TransactionErrorMessage";
 import { WaitingForTransactionMessage } from "./WaitingForTransactionMessage";
-import { NoTokensMessage } from "./NoTokensMessage";
+import { NoTokensMessage, NoTokensMessageAdmin } from "./NoTokensMessage";
 import { Tabela } from "./Tabela";
 
 const HARDHAT_NETWORK_ID = '31337';
@@ -95,19 +94,21 @@ export class Dapp extends React.Component {
         </div>
   
         <div className="row">
-          {/* Coluna para Vote e IssueTokens */}
           <div className="col-md-6">
             {this.state.balance.eq(0) && (
-              <NoTokensMessage selectedAddress={this.state.selectedAddress} />
+              this.state.isAdmin ? (
+                <NoTokensMessageAdmin selectedAddress={this.state.selectedAddress} />
+              ) : (
+                <NoTokensMessage selectedAddress={this.state.selectedAddress} />
+              )
             )}
-  
-            {this.state.balance.gt(0) && (
-              <Vote vote={(codinome, amount) => this._vote(codinome, amount)} />
-            )}
-  
-            {this.state.isAdmin && (
-              <IssueTokens
+
+            {this.state.balance && (
+              <VoteAndIssue
+                vote={(codinome, amount) => this._vote(codinome, amount)}
                 issueTokens={(codinome, amount) => this._issueTokens(codinome, amount)}
+                isAdmin={this.state.isAdmin}
+                balance={this.state.balance}
               />
             )}
           </div>
@@ -121,10 +122,10 @@ export class Dapp extends React.Component {
             <p>
               Estado atual da votação: 
               <span className={this.state.votingStatus === 0 ? "text-success" : "text-danger"}>
-                {this.state.votingStatus === 0 ? " Ativada" : " Desativada"}
+                {this.state.votingStatus === 0 ? " Ativa" : " Desativada"}
               </span>
             </p>
-            
+
             {this.state.isAdmin && (
               <div>
                 {this.state.votingStatus === 0 ? (
@@ -157,7 +158,6 @@ export class Dapp extends React.Component {
       </div>
     );
   }
-  
 
   componentWillUnmount() {
     this._stopPollingData();

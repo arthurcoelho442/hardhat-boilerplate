@@ -88,7 +88,7 @@ contract Token is ERC20, AccessControl {
         // + 0,2 Turing por votar
         address addrVoto = users[codinome].addr;
 
-        require(amount <= 2 * (10 ** 18), 'Valor acima do montante de saTurings');
+        require(amount <= 2 * (10 ** 18), 'Valor acima do montante de saTurings permitido');
         require(msg.sender != addrVoto, 'Nao e possivel votar em si mesmo');
 
         string memory codinomeUser = getCodinomeUser(msg.sender);
