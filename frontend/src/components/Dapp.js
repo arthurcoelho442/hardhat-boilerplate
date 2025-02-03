@@ -224,20 +224,22 @@ export class Dapp extends React.Component {
       }))
       .filter(user => user.balance !== '0');
   
+    usersWithBalances.sort((a, b) => {
+      return parseInt(b.balance) - parseInt(a.balance); 
+    });
+  
     this.setState({ usersWithBalances });
   }
 
   async componentDidMount() {
     this._initializeEthers();
 
-    // Escuta o evento de voto
     this._token.on('Voted', (voter, amount) => {
       this._updateBalance();
     });
 
-    // Escuta o evento de emissão de tokens
     this._token.on('TokensIssued', (admin, recipient, amount) => {
-      this._updateBalance(); // Atualiza saldos
+      this._updateBalance(); 
     });
   }
 
